@@ -10,11 +10,12 @@ global.Flirts = new Meteor.Collection \flirts
 Flirts.allow {
   insert: (user-id, flirt) ->
     user = Meteor.users.find-one {_id: user-id}
-    verified = false
-    for email in user.emails
-      console.log email
-      verified = verified || email.verified
-    verified
+    if user?
+      verified = false
+      for email in user.emails
+        console.log email
+        verified = verified || email.verified
+      verified
 }
 
 Flirts.allow {

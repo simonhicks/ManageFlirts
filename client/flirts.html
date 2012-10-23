@@ -10,9 +10,12 @@
 
     {{> accountButtons}}
 
-    <h1 class='offset6'>ManageFlirts</h1>
+    <h1 class='offset4' style='display: inline-block'>ManageFlirts</h1> {{> addFlirtButton}}
+
+    <div class='clear'>&nbsp;</div>
     {{> flash}}
     <div class='clear'>&nbsp;</div>
+
     <div class="fluid-row">
       {{> people}}
 
@@ -28,9 +31,13 @@
   </div>
 </body>
 
+<template name="addFlirtButton">
+  <button class="btn btn-large btn-primary offset1" id="add-flirt">Add a flirt</button>
+</template>
+
 <template name="flash">
   {{#if showFlash}}
-    <div id="flash-box" class="alert span6 offset5 {{type}}">
+    <div id="flash-box" class="alert span6 offset4 {{type}}">
       {{{content}}}
     </div>
   {{else}}
@@ -55,7 +62,6 @@
         <th class='name span2'>Flirter{{{sortIcon "name"}}}</th>
         <th class='flirts span1'># flirts{{{sortIcon "flirts"}}}</th>
         <th class='flirted-with span1'># times flirted with{{{sortIcon "flirted-with"}}}</th>
-        <th class='span1'> </th>
       </tr>
     </thead>
 
@@ -69,10 +75,9 @@
 
 <template name="person">
   <tr>
-    <td><strong>{{profile.fullName}}</strong></td>
+    <td><strong>{{fullName}}</strong></td>
     <td>{{flirtCount}}</td>
     <td>{{flirtedWithCount}}</td>
-    <td><button class="btn add-flirt">Flirt</button></td>
   </tr>
 </template>
 
@@ -84,17 +89,32 @@
 
 <template name="addFlirt">
   {{#if addingFlirt}}
-    <div class="modal">
+    <div class="modal narrow-dialog">
       <div class="modal-header">
         <button type="button" class="close cancel-add-flirt">x</button>
-        <h3>Who is {{flirter}} flirting with?</h3>
+        <h3>Who is flirting with who?</h3>
       </div>
       <div class="modal-body">
-        <select class="offset1" id="target-select">
-          {{#each others}}
-            {{> selectTarget}}
+        <select class="offset0" id="flirter-select">
+          <option id="none" selected>--</option>
+          {{#each flirters}}
+            <option id="{{this}}" class='hide-flirter-input'>{{this}}</option>
           {{/each}}
+          <option id="other" class='show-flirter-input'>Other</option>
         </select>
+        <input type="text" id="flirter-input">
+        <br />
+        <strong>&nbsp;&nbsp;&nbsp;&nbsp;is flirting with...</strong>
+        <br />
+        <br />
+        <select class="offset0" id="target-select">
+          <option id="none" selected>--</option>
+          {{#each flirters}}
+            <option id="{{this}}" class='hide-target-input'>{{this}}</option>
+          {{/each}}
+          <option id="other" class='show-target-input'>Other</option>
+        </select>
+        <input type="text" id="target-input">
       </div>
       <div class="modal-footer">
         <a href="#" class="btn cancel-add-flirt">Cancel</a>
@@ -102,10 +122,6 @@
       </div>
     </div>
   {{/if}}
-</template>
-
-<template name="selectTarget">
-  <option id="{{fullName}}">{{fullName}}</option>
 </template>
 
 <template name="loginDialog">

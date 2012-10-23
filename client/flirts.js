@@ -1,4 +1,4 @@
-var resetNewFlirter, __flash, flirtCount, flirtedWithCount, currentUser, setSort, loggedIn, hasAccount, login, signup, cancelLoginDialog, submitLoginDialog, cancelAccountsDialog, submitAccountsDialog;
+var resetNewFlirter, __flash, getFlirterNames, flirtCount, flirtedWithCount, currentUser, setSort, loggedIn, hasAccount, login, signup, cancelLoginDialog, submitLoginDialog, cancelAccountsDialog, submitAccountsDialog;
 window.Users = Meteor.users;
 window.Flirts = new Meteor.Collection('flirts');
 Meteor.subscribe('allUserData');
@@ -10,9 +10,10 @@ Session.set('login-dialog-error', false);
 Session.set('has-account', true);
 Session.set('show-accounts-dialog', false);
 Session.set('change-password-error', false);
+Session.set('show-other-flirter', false);
+Session.set('show-other-target', false);
 resetNewFlirter = function(){
-  Session.set('new-flirter-id', null);
-  return Session.set('new-flirter-name', null);
+  return Session.set('adding-flirt', false);
 };
 resetNewFlirter();
 Accounts.ui.config({
@@ -43,14 +44,25 @@ Template.flash.type = function(){
 Template.flash.showFlash = function(){
   return Session.get('flash');
 };
+getFlirterNames = function(){
+  var flirts, flirters, targets;
+  flirts = Flirts.find({}).fetch();
+  flirters = _.map(flirts, function(it){
+    return it.flirterName;
+  });
+  targets = _.map(flirts, function(it){
+    return it.targetName;
+  });
+  return _.uniq(flirters.concat(targets));
+};
 flirtCount = function(user){
   return Flirts.find({
-    flirterName: user.profile.fullName
+    flirterName: user
   }).count();
 };
 flirtedWithCount = function(user){
   return Flirts.find({
-    targetName: user.profile.fullName
+    targetName: user
   }).count();
 };
 currentUser = function(){
@@ -110,7 +122,7 @@ Template.people.events({
 });
 Template.people.people = function(){
   var u, sorted;
-  u = Users.find({}).fetch();
+  u = getFlirterNames();
   sorted = (function(){
     switch (Session.get('sort-by')) {
     case 'flirts':
@@ -118,9 +130,7 @@ Template.people.people = function(){
     case 'flirted-with':
       return _.sortBy(u, flirtedWithCount);
     case 'name':
-      return _.sortBy(u, function(it){
-        return it.profile.fullName;
-      });
+      return u.sort();
     default:
       return u;
     }
@@ -131,6 +141,9 @@ Template.people.people = function(){
     return sorted;
   }
 };
+Template.person.fullName = function(){
+  return this;
+};
 Template.person.flirtCount = function(){
   return flirtCount(this);
 };
@@ -139,32 +152,22 @@ Template.person.flirtedWithCount = function(){
 };
 Template.person.events({
   'click .add-flirt': function(e){
-    return Session.set('new-flirter-name', this.profile.fullName);
+    return Session.set('new-flirter-name', this);
+  }
+});
+Template.addFlirtButton.events({
+  "click #add-flirt": function(){
+    return Session.set('adding-flirt', true);
   }
 });
 Template.addFlirt.addingFlirt = function(){
-  return !Session.equals('new-flirter-name', null);
+  return Session.get('adding-flirt');
+};
+Template.addFlirt.flirters = function(){
+  return getFlirterNames();
 };
 Template.addFlirt.others = function(){
-  var sel, opts, users, n, len$, t, results$ = [];
-  sel = {
-    'profile.fullName': {
-      $ne: Session.get('new-flirter-name')
-    }
-  };
-  opts = {
-    sort: [['profile.fullName', 'asc']]
-  };
-  users = Meteor.users.find(sel, opts).fetch();
-  for (n = 0, len$ = users.length; n < len$; ++n) {
-    t = users[n];
-    results$.push({
-      fullName: t.profile.fullName,
-      id: t._id,
-      n: n
-    });
-  }
-  return results$;
+  return getFlirterNames();
 };
 Template.addFlirt.flirter = function(){
   return Session.get('new-flirter-name');
@@ -175,21 +178,49 @@ Template.addFlirt.events({
   },
   'click .execute-add-flirt': function(evnt, tmpl){
     var newFlirter, target;
-    newFlirter = Session.get('new-flirter-name');
-    target = tmpl.find('#target-select > option:selected').id;
-    Flirts.insert({
-      flirterName: newFlirter,
-      targetName: target
-    }, function(err){
-      if (err != null) {
-        return flashError("<strong>Error saving flirt:</strong> " + err.reason);
-      } else {
-        return flashSuccess("<strong>Success:</strong> " + newFlirter + " just flirted with " + target);
-      }
-    });
+    newFlirter = tmpl.find('#flirter-input').value || tmpl.find('#flirter-select > option:selected').id;
+    target = tmpl.find('#target-input').value || tmpl.find('#target-select > option:selected').id;
+    if (newFlirter === "none" || target === "none") {
+      flashError("<strong>Error saving flirt:</strong> You must select both people to add a flirt");
+    } else if (newFlirter === target) {
+      flashError("<strong>Error saving flirt:</strong> You can't flirt with yourself!");
+    } else {
+      Flirts.insert({
+        flirterName: newFlirter,
+        targetName: target
+      }, function(err){
+        if (err != null) {
+          return flashError("<strong>Error saving flirt:</strong> You must be logged in as a verified user to add flirts.");
+        } else {
+          return flashSuccess("<strong>Success:</strong> " + newFlirter + " just flirted with " + target);
+        }
+      });
+    }
     return resetNewFlirter();
+  },
+  'change select#target-select': function(evt, tmpl){
+    var id;
+    id = tmpl.find('#target-select > option:selected').id;
+    if (id === 'other') {
+      return $('#target-input').show();
+    } else {
+      return $('#target-input').hide();
+    }
+  },
+  'change select#flirter-select': function(evt, tmpl){
+    var id;
+    id = tmpl.find('#flirter-select > option:selected').id;
+    if (id === 'other') {
+      return $('#flirter-input').show();
+    } else {
+      return $('#flirter-input').hide();
+    }
   }
 });
+Template.addFlirt.rendered = function(){
+  $('#flirter-input').hide();
+  return $('#target-input').hide();
+};
 Template.chart.rendered = function(){
   return Meteor.autorun(function(){
     var allFlirts, chartData, i$, len$, flirt, flirter, target, ref$;

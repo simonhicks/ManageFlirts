@@ -13,9 +13,11 @@ Session.set \has-account, true
 Session.set \show-accounts-dialog, false
 Session.set \change-password-error, false
 
+Session.set(\show-other-flirter, false)
+Session.set(\show-other-target, false)
+
 reset-new-flirter = ->
-  Session.set \new-flirter-id, null
-  Session.set \new-flirter-name, null
+  Session.set \adding-flirt, false
 
 reset-new-flirter!
 
@@ -44,11 +46,18 @@ Template.flash.showFlash = ->
   Session.get \flash
 
 # utilities
+get-flirter-names = ->
+  flirts = Flirts.find({}).fetch!
+  flirters = _ .map flirts, (.flirter-name)
+  targets = _ .map flirts, (.target-name)
+  _.uniq flirters.concat(targets)
+
+
 flirt-count = (user) ->
-  Flirts.find {flirter-name: user.profile.full-name} .count!
+  Flirts.find {flirter-name: user} .count!
 
 flirted-with-count = (user) ->
-  Flirts.find {target-name: user.profile.full-name} .count!
+  Flirts.find {target-name: user} .count!
 
 current-user = ->
   Meteor.user!
@@ -98,12 +107,12 @@ Template.people.events {
 }
 
 Template.people.people = ->
-  u = Users.find {} .fetch!
+  u = get-flirter-names!
 
   sorted = switch Session.get(\sort-by)
   | \flirts       => _.sort-by u, flirt-count
   | \flirted-with => _.sort-by u, flirted-with-count
-  | \name         => _.sort-by u, (.profile .full-name)
+  | \name         => u.sort!
   | otherwise     => u
 
   if Session.get \reverse
@@ -112,6 +121,9 @@ Template.people.people = ->
     sorted
 
 # person template
+Template.person.full-name = ->
+  @
+
 Template.person.flirt-count = ->
   flirt-count(@)
 
@@ -120,18 +132,25 @@ Template.person.flirted-with-count = ->
 
 Template.person.events {
   'click .add-flirt': (e) ->
-    Session.set(\new-flirter-name, @profile.full-name)
+    Session.set(\new-flirter-name, @)
+}
+
+# add flirt button
+
+Template.add-flirt-button.events {
+  "click \#add-flirt": ->
+    Session.set(\adding-flirt, true);
 }
 
 # add-flirt template
 Template.add-flirt.adding-flirt = ->
-  ! Session.equals(\new-flirter-name, null)
+  Session.get(\adding-flirt)
+
+Template.add-flirt.flirters = ->
+  get-flirter-names!
 
 Template.add-flirt.others = ->
-  sel = {'profile.fullName': {$ne: Session.get(\new-flirter-name)}}
-  opts = {sort: [['profile.fullName', 'asc']]}
-  users = Meteor.users.find sel, opts .fetch!
-  [{full-name: t.profile.full-name, id: t._id, n: n} for t, n in users]
+  get-flirter-names!
 
 Template.add-flirt.flirter = ->
   Session.get(\new-flirter-name)
@@ -139,17 +158,40 @@ Template.add-flirt.flirter = ->
 Template.add-flirt.events {
   'click .cancel-add-flirt': ->
     reset-new-flirter!
-  'click .execute-add-flirt': (evnt, tmpl) ->
-    new-flirter = Session.get(\new-flirter-name)
-    target = tmpl.find('#target-select > option:selected').id
-    Flirts.insert {flirter-name: new-flirter, target-name: target}, (err) ->
-      if err?
-        flash-error "<strong>Error saving flirt:</strong> #{err.reason}"
-      else
-        flash-success "<strong>Success:</strong> #{new-flirter} just flirted with #{target}"
 
+  'click .execute-add-flirt': (evnt, tmpl) ->
+    new-flirter = tmpl.find('#flirter-input').value || tmpl.find('#flirter-select > option:selected').id
+    target = tmpl.find('#target-input').value || tmpl.find('#target-select > option:selected').id
+    if new-flirter == "none" || target == "none"
+      flash-error "<strong>Error saving flirt:</strong> You must select both people to add a flirt"
+    else if new-flirter == target
+      flash-error "<strong>Error saving flirt:</strong> You can't flirt with yourself!"
+    else
+      Flirts.insert {flirter-name: new-flirter, target-name: target}, (err) ->
+        if err?
+          flash-error "<strong>Error saving flirt:</strong> You must be logged in as a verified user to add flirts."
+        else
+          flash-success "<strong>Success:</strong> #{new-flirter} just flirted with #{target}"
     reset-new-flirter!
+
+  'change select#target-select': (evt, tmpl) ->
+    id = tmpl.find('#target-select > option:selected').id
+    if id is 'other'
+      $('#target-input').show!
+    else
+      $('#target-input').hide!
+
+  'change select#flirter-select': (evt, tmpl) ->
+    id = tmpl.find('#flirter-select > option:selected').id
+    if id is 'other'
+      $('#flirter-input').show!
+    else
+      $('#flirter-input').hide!
 }
+
+Template.add-flirt.rendered = ->
+  $('#flirter-input').hide()
+  $('#target-input').hide()
 
 Template.chart.rendered = ->
   Meteor.autorun ->
