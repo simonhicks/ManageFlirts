@@ -21,6 +21,7 @@ Flirts.allow {
 Flirts.allow {
   insert: (user-id, flirt) ->
     flirt?.target-name?.length > 0 && flirt?.flirter-name?.length > 0
+}
 
 Meteor.publish \flirts, ->
   Flirts.find({})

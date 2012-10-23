@@ -13,13 +13,21 @@ Flirts.allow({
     user = Meteor.users.findOne({
       _id: userId
     });
-    verified = false;
-    for (i$ = 0, len$ = (ref$ = user.emails).length; i$ < len$; ++i$) {
-      email = ref$[i$];
-      console.log(email);
-      verified = verified || email.verified;
+    if (user != null) {
+      verified = false;
+      for (i$ = 0, len$ = (ref$ = user.emails).length; i$ < len$; ++i$) {
+        email = ref$[i$];
+        console.log(email);
+        verified = verified || email.verified;
+      }
+      return verified;
     }
-    return verified;
+  }
+});
+Flirts.allow({
+  insert: function(userId, flirt){
+    var ref$;
+    return (flirt != null ? (ref$ = flirt.targetName) != null ? ref$.length : void 8 : void 8) > 0 && (flirt != null ? (ref$ = flirt.flirterName) != null ? ref$.length : void 8 : void 8) > 0;
   }
 });
 Meteor.publish('flirts', function(){
