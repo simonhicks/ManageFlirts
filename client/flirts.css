@@ -1,0 +1,7 @@
+.narrow-dialog {
+  width: 280px;
+}
+.clear {
+  display: block;
+  clear: both;
+}

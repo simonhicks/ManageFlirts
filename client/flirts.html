@@ -1,0 +1,177 @@
+<head>
+  <title>flirts</title>
+  <script src="http://code.highcharts.com/highcharts.js"></script>
+  <script src="http://code.highcharts.com/modules/exporting.js"></script>
+  <script src="./drilldown-chart.js"></script>
+</head>
+
+<body>
+  <div class="fluid-container">
+
+    {{> accountButtons}}
+
+    <h1 class='offset6'>ManageFlirts</h1>
+    {{> flash}}
+    <div class='clear'>&nbsp;</div>
+    <div class="fluid-row">
+      {{> people}}
+
+      {{> chart}}
+    </div>
+
+    <!-- dialogs -->
+    {{> loginDialog}}
+
+    {{> accountsDialog}}
+
+    {{> addFlirt}}
+  </div>
+</body>
+
+<template name="flash">
+  {{#if showFlash}}
+    <div id="flash-box" class="alert span6 offset5 {{type}}">
+      {{{content}}}
+    </div>
+  {{else}}
+    <div class="span6 offset5">
+      <br/>
+      &nbsp;
+      <br/>
+    </div>
+  {{/if}}
+</template>
+
+<template name='accountButtons'>
+  <span class='pull-right'>
+    <a href='#' id='account-link'>{{linkText}}</a>
+  </span>
+</template>
+
+<template name="people">
+  <table class="table table-striped table-bordered span6">
+    <thead>
+      <tr>
+        <th class='name span2'>Flirter{{{sortIcon "name"}}}</th>
+        <th class='flirts span1'># flirts{{{sortIcon "flirts"}}}</th>
+        <th class='flirted-with span1'># times flirted with{{{sortIcon "flirted-with"}}}</th>
+        <th class='span1'> </th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {{#each people}}
+        {{> person}}
+      {{/each}}
+    </tbody>
+  </table>
+</template>
+
+<template name="person">
+  <tr>
+    <td><strong>{{profile.fullName}}</strong></td>
+    <td>{{flirtCount}}</td>
+    <td>{{flirtedWithCount}}</td>
+    <td><button class="btn add-flirt">Flirt</button></td>
+  </tr>
+</template>
+
+<template name="chart">
+  <div clas="span6">
+    <div id="container" class="offset6" style="min-width: 100px; height: 400px;"></div>
+  </div>
+</template>
+
+<template name="addFlirt">
+  {{#if addingFlirt}}
+    <div class="modal">
+      <div class="modal-header">
+        <button type="button" class="close cancel-add-flirt">x</button>
+        <h3>Who is {{flirter}} flirting with?</h3>
+      </div>
+      <div class="modal-body">
+        <select class="offset1" id="target-select">
+          {{#each others}}
+            {{> selectTarget}}
+          {{/each}}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <a href="#" class="btn cancel-add-flirt">Cancel</a>
+        <a href="#" class="btn btn-primary execute-add-flirt">Save</a>
+      </div>
+    </div>
+  {{/if}}
+</template>
+
+<template name="selectTarget">
+  <option id="{{fullName}}">{{fullName}}</option>
+</template>
+
+<template name="loginDialog">
+  {{#if showDialog}}
+    <div class="modal narrow-dialog">
+      <div class="modal-header">
+        <button type="button" class="close cancel-login-dialog">x</button>
+        <h3>{{executeText}}</h3>
+      </div>
+      <div class="modal-body" id="login-dialog">
+        {{#if loginError}}
+          <span class="text-error">{{loginError}}</span>
+        {{/if}}
+
+        <input type="text" placeholder="PN Username" id="login-username">
+
+        {{#unless hasAccount}}
+          <input type="text" placeholder="Full name" id="login-full-name">
+          <hr />
+        {{/unless}}
+
+        <input type="password" placeholder="Password" id="login-password">
+        {{#unless hasAccount}}
+          <input type="password" placeholder="Confirm password" id="login-confirm-password">
+        {{/unless}}
+
+        <small>
+          {{#if hasAccount}}
+            <a href='#' class="pull-right signup-link">
+              Don't have an account? Click here to sign up.
+            </a>
+          {{else}}
+            <a href='#' class="pull-right login-link">
+              Already have an account? Click here to log in.
+            </a>
+          {{/if}}
+        </small>
+      </div>
+      <div class="modal-footer">
+        <a href="#" class="btn cancel-login-dialog">Cancel</a>
+        <a href="#" class="btn btn-primary execute-login-dialog">{{executeText}}</a>
+      </div>
+    </div>
+  {{/if}}
+</template>
+
+<template name="accountsDialog">
+  {{#if showDialog}}
+    <div class="modal narrow-dialog">
+      <div class="modal-header">
+        <button type="button" class="close cancel-accounts-dialog">x</button>
+        <h3>Account options</h3>
+      </div>
+      <div class="modal-body" id="accounts-dialog">
+        <input type="password" placeholder="Old password" id="old-password">
+        <input type="password" placeholder="New password" id="new-password">
+        <input type="password" placeholder="Confirm new password" id="confirm-password">
+        {{#if changePasswordError}}<span class="text-error">{{changePasswordError}}</span>{{/if}}
+        <br />
+        <br />
+        <a href="#" class="btn btn-primary change-password" id="change-password">Change password</a>
+      </div>
+      <div class="modal-footer">
+        <a href="#" class="btn cancel-accounts-dialog">Cancel</a>
+        <a href="#" class="btn sign-out">Sign out</a>
+      </div>
+    </div>
+  {{/if}}
+</template>
